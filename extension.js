@@ -61,10 +61,13 @@ export default class AlmostFullscreenExtension extends Extension {
       }
     );
 
-    const settings = this._getSettings().set_strv(
-      "almost-fullscreen-keybinding",
-      [this._keybinding]
-    );
+    const settings = this._getSettings();
+    // TODO: set CUSTOM shortcut:
+    // const settings = this._getSettings().set_strv(
+    //   "almost-fullscreen-keybinding",
+    //   [this._keybinding]
+    // );
+
     const mode = Shell.ActionMode.NORMAL;
     const flag = Meta.KeyBindingFlags.NONE;
 
@@ -78,10 +81,9 @@ export default class AlmostFullscreenExtension extends Extension {
   }
 
   _onKeybindingPressed() {
-    let window = global.display.focus_window;
+    const window = global.display.focus_window;
 
     if (!window || window.window_type !== Meta.WindowType.NORMAL) return;
-
     this._resizeWindow(window);
   }
 
@@ -90,7 +92,7 @@ export default class AlmostFullscreenExtension extends Extension {
       if (window.is_destroyed?.()) return;
 
       if (window.maximized_horizontally || window.maximized_vertically) {
-        window.unmaximize(); // param = Meta.MaximizeFlags.BOTH
+        window.unmaximize();
 
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
           if (window.allows_resize()) this._doResize(window);
@@ -103,14 +105,12 @@ export default class AlmostFullscreenExtension extends Extension {
 
       this._doResize(window);
     } catch (e) {
-      logError(e, "almost-fullscreen-auto");
+      logError(e, "almost-fullscreen");
     }
   }
 
   _doResize(window) {
     try {
-      if (window.is_destroyed?.()) return;
-
       const wa = Main.layoutManager.getWorkAreaForMonitor(window.get_monitor());
 
       const x = wa.x + this._padding;
@@ -120,7 +120,7 @@ export default class AlmostFullscreenExtension extends Extension {
 
       window.move_resize_frame(true, x, y, width, height);
     } catch (e) {
-      logError(e, "almost-fullscreen-auto resize");
+      logError(e, "almost-fullscreen resize");
     }
   }
 
