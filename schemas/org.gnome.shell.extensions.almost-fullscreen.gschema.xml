@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.almost-fullscreen"
+    path="/org/gnome/shell/extensions/almost-fullscreen/">
+    
+    <key type="as" name="almost-fullscreen-keybinding">
+      <default><![CDATA[['<Super>f']]]></default>
+      <summary>Almost fullscreen keybinding</summary>
+      <description>
+        Resize focused window with padding
+      </description>
+    </key>
+    
+  </schema>
+</schemalist>
