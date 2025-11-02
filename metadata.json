@@ -1,7 +1,7 @@
 {
   "uuid": "almost-fullscreen@github.com.z-Eduard005",
   "name": "Almost Fullscreen",
-  "description": "When you open any window, extension resizes it to monitor workarea minus CUSTOM padding. Also you can do that for focused window via CUSTOM shortcut.\n\nTo set CUSTOM values go to '~/.local/share/gnome-shell/extensions/almost-fullscreen@github.com.z-Eduard005/config.json'. To see changes, just log out ;)",
+  "description": "When you open any window, extension resizes it to monitor workarea minus CUSTOM padding. Also you can do that for focused window via CUSTOM shortcut.\n\nTo set CUSTOM values go to '~/.local/share/gnome-shell/extensions/almost-fullscreen@github.com.z-Eduard005/example-config.json' and rename to 'config.json'. To see changes, just log out ;)",
   "shell-version": [
     "48",
     "49"

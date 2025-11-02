@@ -18,7 +18,7 @@ export default class AlmostFullscreenExtension extends Extension {
         const configText = new TextDecoder("utf-8").decode(contents);
         const config = JSON.parse(configText);
 
-        this._padding = config.padding || INIT_PADDING;
+        this._padding = Math.round(config.padding || INIT_PADDING);
         this._keybinding = config.keybinding || INIT_KEYBINDING;
       } else throw new Error("Failed to load config.json");
     } catch (e) {
@@ -49,8 +49,12 @@ export default class AlmostFullscreenExtension extends Extension {
 
     this._windowCreatedId = global.display.connect(
       "window-created",
-      (display, window) => {
-        if (!window || window.window_type !== Meta.WindowType.NORMAL) return;
+      (_, window) => {
+        const actor = window.get_compositor_private();
+        const id = actor.connect("first-frame", (_) => {
+          this._resizeWindow(window);
+          actor.disconnect(id);
+        });
 
         [200, 400, 600].forEach((delay) => {
           GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
@@ -81,44 +85,71 @@ export default class AlmostFullscreenExtension extends Extension {
   }
 
   _onKeybindingPressed() {
-    const window = global.display.focus_window;
-
-    if (!window || window.window_type !== Meta.WindowType.NORMAL) return;
-    this._resizeWindow(window);
+    const focusedWindow = global.display.focus_window;
+    this._resizeWindow(focusedWindow, focusedWindow.get_compositor_private());
   }
 
-  _resizeWindow(window) {
+  _resizeWindow(window, actor) {
     try {
-      if (window.is_destroyed?.()) return;
+      if (
+        !window ||
+        window.window_type !== Meta.WindowType.NORMAL ||
+        window.is_destroyed?.()
+      )
+        return;
 
-      if (window.maximized_horizontally || window.maximized_vertically) {
+      if (window.maximized_horizontally || window.maximized_vertically)
         window.unmaximize();
 
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
-          if (window.allows_resize()) this._doResize(window);
-          return GLib.SOURCE_REMOVE;
-        });
-        return;
-      }
-
-      if (!window.allows_resize()) return;
-
-      this._doResize(window);
+      if (window.allows_resize()) this._doResize(window, actor);
     } catch (e) {
       logError(e, "almost-fullscreen");
     }
   }
 
-  _doResize(window) {
+  _doResize(window, actor) {
     try {
-      const wa = Main.layoutManager.getWorkAreaForMonitor(window.get_monitor());
+      const { x, y, width, height } = Main.layoutManager.getWorkAreaForMonitor(
+        window.get_monitor()
+      );
 
-      const x = wa.x + this._padding;
-      const y = wa.y + this._padding;
-      const width = Math.max(100, wa.width - this._padding * 2);
-      const height = Math.max(100, wa.height - this._padding * 2);
+      const frameRect = window.get_frame_rect();
+      const bufferRect = window.get_buffer_rect();
+      const offsetX = Math.round(bufferRect.x) - Math.round(frameRect.x);
+      const offsetY = Math.round(bufferRect.y) - Math.round(frameRect.y);
 
-      window.move_resize_frame(true, x, y, width, height);
+      const newX = Math.round(x) + this._padding;
+      const newY = Math.round(y) + this._padding;
+      const newWidth = Math.max(100, Math.round(width) - this._padding * 2);
+      const newHeight = Math.max(100, Math.round(height) - this._padding * 2);
+
+      if (
+        newX === Math.round(frameRect.x) &&
+        newY === Math.round(frameRect.y) &&
+        newWidth === Math.round(frameRect.width) &&
+        newHeight === Math.round(frameRect.height)
+      )
+        return;
+
+      //! Workaround: some windows resize themselves a pixel smaller
+      if (!window.maximized_horizontally && !window.maximized_vertically) {
+        window.maximize();
+        window.unmaximize();
+      }
+
+      if (actor) {
+        actor.ease({
+          //! Offsets are important for some windows
+          x: newX + offsetX,
+          y: newY + offsetY,
+          width: newWidth,
+          height: newHeight,
+          duration: 400,
+          mode: global.ease_out_cubic,
+        });
+      }
+
+      window.move_resize_frame(false, newX, newY, newWidth, newHeight);
     } catch (e) {
       logError(e, "almost-fullscreen resize");
     }
