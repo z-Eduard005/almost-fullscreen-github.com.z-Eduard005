@@ -1,4 +1,12 @@
 {
-  "padding": 8,
-  "keybinding": "<Super>f"
+  "keybinding": "<Super>f",
+  "padding": {
+    "t": 8,
+    "b": 8,
+    "l": 8,
+    "r": 8
+  },
+  "ignoreWindows": [
+    "org.gnome.Nautilus"
+  ]
 }

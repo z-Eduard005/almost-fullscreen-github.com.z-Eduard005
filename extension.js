@@ -7,6 +7,7 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 const INIT_PADDING = 8;
 const INIT_KEYBINDING = "<Super>f";
+const INIT_IGNORE_WINDOWS = [];
 
 export default class AlmostFullscreenExtension extends Extension {
   _loadConfig() {
@@ -15,16 +16,27 @@ export default class AlmostFullscreenExtension extends Extension {
       const [success, contents] = configFile.load_contents(null);
 
       if (success) {
-        const configText = new TextDecoder("utf-8").decode(contents);
-        const config = JSON.parse(configText);
+        const config = JSON.parse(new TextDecoder("utf-8").decode(contents));
 
-        this._padding = Math.round(config.padding || INIT_PADDING);
         this._keybinding = config.keybinding || INIT_KEYBINDING;
+        this._padding = {
+          t: Math.round(config.padding.t || INIT_PADDING),
+          b: Math.round(config.padding.b || INIT_PADDING),
+          l: Math.round(config.padding.l || INIT_PADDING),
+          r: Math.round(config.padding.r || INIT_PADDING),
+        };
+        this._ignoreWindows = config.ignoreFiles || INIT_IGNORE_WINDOWS;
       } else throw new Error("Failed to load config.json");
     } catch (e) {
       logError(e);
-      this._padding = INIT_PADDING;
       this._keybinding = INIT_KEYBINDING;
+      this._padding = {
+        t: INIT_PADDING,
+        b: INIT_PADDING,
+        l: INIT_PADDING,
+        r: INIT_PADDING,
+      };
+      this._ignoreWindows = INIT_IGNORE_WINDOWS;
     }
   }
 
@@ -56,6 +68,7 @@ export default class AlmostFullscreenExtension extends Extension {
           actor.disconnect(id);
         });
 
+        //! Delays are important for some windows
         [200, 400, 600].forEach((delay) => {
           GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
             this._resizeWindow(window);
@@ -66,11 +79,7 @@ export default class AlmostFullscreenExtension extends Extension {
     );
 
     const settings = this._getSettings();
-    // TODO: set CUSTOM shortcut:
-    // const settings = this._getSettings().set_strv(
-    //   "almost-fullscreen-keybinding",
-    //   [this._keybinding]
-    // );
+    settings.set_strv("almost-fullscreen-keybinding", [this._keybinding]);
 
     const mode = Shell.ActionMode.NORMAL;
     const flag = Meta.KeyBindingFlags.NONE;
@@ -94,7 +103,8 @@ export default class AlmostFullscreenExtension extends Extension {
       if (
         !window ||
         window.window_type !== Meta.WindowType.NORMAL ||
-        window.is_destroyed?.()
+        window.is_destroyed?.() ||
+        this._ignoreWindows.includes(window.get_wm_class())
       )
         return;
 
@@ -118,10 +128,16 @@ export default class AlmostFullscreenExtension extends Extension {
       const offsetX = Math.round(bufferRect.x) - Math.round(frameRect.x);
       const offsetY = Math.round(bufferRect.y) - Math.round(frameRect.y);
 
-      const newX = Math.round(x) + this._padding;
-      const newY = Math.round(y) + this._padding;
-      const newWidth = Math.max(100, Math.round(width) - this._padding * 2);
-      const newHeight = Math.max(100, Math.round(height) - this._padding * 2);
+      const newX = Math.round(x) + this._padding.l;
+      const newY = Math.round(y) + this._padding.t;
+      const newWidth = Math.max(
+        100,
+        Math.round(width) - (this._padding.l + this._padding.r)
+      );
+      const newHeight = Math.max(
+        100,
+        Math.round(height) - (this._padding.t + this._padding.b)
+      );
 
       if (
         newX === Math.round(frameRect.x) &&
