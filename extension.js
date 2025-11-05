@@ -25,7 +25,7 @@ export default class AlmostFullscreenExtension extends Extension {
           l: Math.round(config.padding.l || INIT_PADDING),
           r: Math.round(config.padding.r || INIT_PADDING),
         };
-        this._ignoreWindows = config.ignoreFiles || INIT_IGNORE_WINDOWS;
+        this._ignoreWindows = config.ignoreWindows || INIT_IGNORE_WINDOWS;
       } else throw new Error("Failed to load config.json");
     } catch (e) {
       logError(e);
