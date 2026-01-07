@@ -69,11 +69,9 @@ export default class AlmostFullscreenExtension extends Extension {
         });
 
         //! Delays are important for some windows
-        [200, 400, 600].forEach((delay) => {
-          GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
-            this._resizeWindow(window);
-            return GLib.SOURCE_REMOVE;
-          });
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 400, () => {
+          this._resizeWindow(window);
+          return GLib.SOURCE_REMOVE;
         });
       }
     );
@@ -81,14 +79,11 @@ export default class AlmostFullscreenExtension extends Extension {
     const settings = this._getSettings();
     settings.set_strv("almost-fullscreen-keybinding", [this._keybinding]);
 
-    const mode = Shell.ActionMode.NORMAL;
-    const flag = Meta.KeyBindingFlags.NONE;
-
     Main.wm.addKeybinding(
       "almost-fullscreen-keybinding",
       settings,
-      flag,
-      mode,
+      Meta.KeyBindingFlags.NONE,
+      Shell.ActionMode.NORMAL,
       () => this._onKeybindingPressed()
     );
   }
@@ -102,9 +97,10 @@ export default class AlmostFullscreenExtension extends Extension {
     try {
       if (
         !window ||
-        window.window_type !== Meta.WindowType.NORMAL ||
         window.is_destroyed?.() ||
-        this._ignoreWindows.includes(window.get_wm_class())
+        window.window_type !== Meta.WindowType.NORMAL ||
+        this._ignoreWindows.includes(window.get_wm_class()) ||
+        !window.get_compositor_private()
       )
         return;
 
